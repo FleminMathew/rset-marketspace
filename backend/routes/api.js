@@ -53,19 +53,7 @@ router.get('/products', async (req, res) => {
     }
 });
 
-// GET products sold BY a specific user
-router.get('/sold-by/:userId', async (req, res) => {
-    try {
-        const products = await SoldProduct.find({ sellerId: req.params.userId });
-        res.json(products);
-    } catch (error) {
-        console.error("Error fetching sold-by products:", error);
-        res.status(500).json({ message: 'Error fetching sold products' });
-    }
-});
-
-
-// GET products bought BY a specific user
+// GET sold products for a specific buyer
 router.get('/sold-products/:userId', async (req, res) => {
     try {
         const products = await SoldProduct.find({ buyerId: req.params.userId });
@@ -76,56 +64,57 @@ router.get('/sold-products/:userId', async (req, res) => {
     }
 });
 
-
 // POST a purchase transaction
 router.post('/purchase', async (req, res) => {
     const { cart, userId } = req.body;
     try {
         for (const item of cart) {
-            // Create a historical record of the sold item
-            const soldItem = new SoldProduct({
-                name: item.name,
-                category: item.category,
-                price: item.price,
-                description: item.description,
-                imageUrl: item.imageUrl,
-                sellerId: item.sellerId,
-                buyerId: userId
-            });
-            await soldItem.save();
-
-            // Remove the original item from the 'products' collection
-            await Product.findByIdAndDelete(item._id);
+            const product = await Product.findById(item._id);
+            if (product && product.quantity > 0) {
+                const soldItem = new SoldProduct({
+                    ...product.toObject(),
+                    _id: undefined, // Let MongoDB generate a new ID
+                    buyerId: userId,
+                    soldAt: new Date()
+                });
+                await soldItem.save();
+                product.quantity -= 1;
+                if (product.quantity === 0) {
+                    await Product.findByIdAndDelete(item._id);
+                } else {
+                    await product.save();
+                }
+            }
         }
         res.status(200).json({ message: 'Purchase successful' });
     } catch (error) {
         console.error('Error during purchase transaction:', error);
-        res.status(500).json({ message: 'Error during purchase transaction' });
+        res.status(500).json({ message: 'Server error during purchase' });
     }
 });
 
 
 // --- Rental Routes ---
 
-// POST a new item for rent
+// POST a new rental item
 router.post('/rentals', upload.single('image'), async (req, res) => {
     try {
         const { name, category, description, ownerId, rentalPricePerDay } = req.body;
         const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
-        
+
         const newRental = new RentalProduct({
             name,
             category,
             description,
             ownerId,
             rentalPricePerDay: parseFloat(rentalPricePerDay),
-            imageUrl
+            imageUrl,
         });
-        const savedRental = await newRental.save();
-        res.status(201).json(savedRental);
+        await newRental.save();
+        res.status(201).json(newRental);
     } catch (error) {
-        console.error("Error adding rental item:", error);
-        res.status(500).json({ message: 'Error adding rental item', error: error.message });
+        console.error("Error adding rental:", error);
+        res.status(500).json({ message: 'Error adding rental', error: error.message });
     }
 });
 
@@ -140,57 +129,57 @@ router.get('/rentals', async (req, res) => {
     }
 });
 
-// POST a review for a rental item
+// POST a new review for a rental item
 router.post('/rentals/:id/reviews', async (req, res) => {
     try {
-        const { userId, rating, comment } = req.body;
         const rental = await RentalProduct.findById(req.params.id);
-
-        if (!rental) return res.status(404).json({ message: 'Rental item not found' });
-        
-        rental.reviews.push({ userId, rating, comment });
-        
-        // Summarize reviews if there are any
-        if (rental.reviews.length > 0) {
-            const allComments = rental.reviews.map(r => r.comment).join('\n');
-            rental.reviewSummary = await summarizeReviews(allComments);
+        if (!rental) {
+            return res.status(404).json({ message: 'Rental item not found' });
         }
+        const { userId, rating, comment } = req.body;
+        rental.reviews.push({ userId, rating, comment });
+
+        // Trigger AI summarization
+        const summary = await summarizeReviews(rental.reviews);
+        rental.reviewSummary = summary;
         
         await rental.save();
         res.status(201).json(rental);
     } catch (error) {
         console.error("Error adding review:", error);
-        res.status(500).json({ message: 'Error adding review', error: error.message });
+        res.status(500).json({ message: 'Error adding review' });
     }
 });
 
 // POST a rental transaction
 router.post('/rent-items', async (req, res) => {
-    const { cart, userId } = req.body; // cart is an array of rental items
+    const { cart, userId } = req.body;
     try {
         for (const item of cart) {
-            // Create a historical record in RentedProducts collection
-            const rentedRecord = new RentedProduct({
-                name: item.name,
-                category: item.category,
-                description: item.description,
-                imageUrl: item.imageUrl,
-                ownerId: item.ownerId,
-                rentalPricePerDay: item.rentalPricePerDay,
-                renterId: userId,
-                rentalDays: item.rentalDays // This is crucial
-            });
-            await rentedRecord.save();
+            const rentalProduct = await RentalProduct.findById(item._id);
+            if (rentalProduct && !rentalProduct.isRented) {
+                // Create a historical record of the rental
+                const rentedItem = new RentedProduct({
+                    ...rentalProduct.toObject(),
+                    _id: undefined,
+                    renterId: userId,
+                    rentalDays: item.rentalDays || 1, // Ensure rentalDays is included
+                    rentedAt: new Date(),
+                });
+                await rentedItem.save();
 
-            // Mark the original item as rented in the RentalProducts collection
-            await RentalProduct.findByIdAndUpdate(item._id, { isRented: true });
+                // Mark the original item as rented
+                rentalProduct.isRented = true;
+                await rentalProduct.save();
+            }
         }
         res.status(200).json({ message: 'Rental successful' });
     } catch (error) {
         console.error('Error during rental transaction:', error);
-        res.status(500).json({ message: 'Error during rental transaction', error: error.message });
+        res.status(500).json({ message: 'Server error during rental' });
     }
 });
+
 
 module.exports = router;
 

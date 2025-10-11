@@ -5,7 +5,7 @@ const Schema = mongoose.Schema;
 const productSchema = new Schema({
     name: { type: String, required: true },
     category: { type: String, required: true },
-    quantity: { type: Number, required: true, default: 1 },
+    quantity: { type: Number, required: true, min: 0 },
     price: { type: Number, required: true },
     description: String,
     sellerId: { type: String, required: true },
@@ -25,8 +25,8 @@ const soldProductSchema = new Schema({
     soldAt: { type: Date, default: Date.now }
 });
 
-const Product = mongoose.model('Product', productSchema);
-const SoldProduct = mongoose.model('SoldProduct', soldProductSchema);
+const Product = mongoose.models.Product || mongoose.model('Product', productSchema);
+const SoldProduct = mongoose.models.SoldProduct || mongoose.model('SoldProduct', soldProductSchema);
 
 module.exports = { Product, SoldProduct };
 
