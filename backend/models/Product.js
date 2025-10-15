@@ -5,11 +5,12 @@ const Schema = mongoose.Schema;
 const productSchema = new Schema({
     name: { type: String, required: true },
     category: { type: String, required: true },
-    quantity: { type: Number, required: true, min: 0 },
+    quantity: { type: Number, required: true, min: 1 },
     price: { type: Number, required: true },
     description: String,
-    sellerId: { type: String, required: true },
+    sellerId: { type: String, required: true, index: true },
     imageUrl: String,
+    contactDetails: { type: String, required: true }, // New field for contact info
     createdAt: { type: Date, default: Date.now }
 });
 
@@ -20,8 +21,9 @@ const soldProductSchema = new Schema({
     price: { type: Number, required: true },
     description: String,
     imageUrl: String,
-    sellerId: { type: String, required: true },
-    buyerId: { type: String, required: true },
+    sellerId: { type: String, required: true, index: true },
+    buyerId: { type: String, required: true, index: true },
+    contactDetails: { type: String }, // Contact info is carried over
     soldAt: { type: Date, default: Date.now }
 });
 

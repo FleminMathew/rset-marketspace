@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
-// Sub-schema for individual reviews
 const reviewSchema = new Schema({
     userId: { type: String, required: true },
     rating: { type: Number, required: true, min: 1, max: 5 },
@@ -17,9 +16,10 @@ const rentalProductSchema = new Schema({
     ownerId: { type: String, required: true },
     imageUrl: String,
     rentalPricePerDay: { type: Number, required: true },
+    contactDetails: String, // **FIX**: Changed from 'required: true' to optional
     isRented: { type: Boolean, default: false },
     reviews: [reviewSchema],
-    reviewSummary: { type: String, default: 'No reviews yet.' }, // Field for AI summary
+    reviewSummary: { type: String, default: 'No reviews yet.' },
     createdAt: { type: Date, default: Date.now }
 });
 
@@ -33,6 +33,7 @@ const rentedProductSchema = new Schema({
     rentalPricePerDay: { type: Number, required: true },
     renterId: { type: String, required: true },
     rentalDays: { type: Number, required: true, min: 1 },
+    contactDetails: String, // **FIX**: Added field for better historical data
     rentedAt: { type: Date, default: Date.now }
 });
 

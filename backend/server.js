@@ -1,36 +1,48 @@
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
-require('dotenv').config();
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
-const PORT = process.env.PORT || 5001;
+const port = process.env.PORT || 5001;
 
-// Middleware
+// --- Middleware ---
 app.use(cors());
-app.use(express.json()); // for parsing application/json
+// This line is crucial - it allows your server to understand and process JSON data sent from the frontend.
+app.use(express.json()); 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// --- Database Connections ---
 
-// --- Database Connection ---
-const MONGO_URI = process.env.MONGO_URI;
+// MongoDB Connection
+mongoose.connect(process.env.MONGO_URI)
+    .then(() => console.log('MongoDB Connected...'))
+    .catch(err => {
+        console.error('MongoDB Connection Error:', err);
+        process.exit(1);
+    });
 
-mongoose.connect(MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-})
-.then(() => console.log("MongoDB Connected..."))
-.catch(err => console.log("MongoDB Connection Error:", err));
+// Supabase Client Initialization
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
+if (!supabaseUrl || !supabaseAnonKey) {
+    console.error("Supabase URL or Anon Key is missing from .env file.");
+    process.exit(1);
+}
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+app.set('supabase', supabase); // Make supabase client available in routes
 
 // --- API Routes ---
 const apiRoutes = require('./routes/api');
 app.use('/api', apiRoutes);
 
 
-// --- Server Listening ---
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+// --- Start Server ---
+app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
 });
 
