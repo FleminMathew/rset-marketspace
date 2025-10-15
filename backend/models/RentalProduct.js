@@ -16,7 +16,12 @@ const rentalProductSchema = new Schema({
     ownerId: { type: String, required: true },
     imageUrl: String,
     rentalPricePerDay: { type: Number, required: true },
-    contactDetails: String, // **FIX**: Changed from 'required: true' to optional
+    contactDetails: String,
+    deliveryZones: {
+        type: [String],
+        required: true,
+        validate: [val => val.length >= 3, 'Please select at least 3 delivery zones.']
+    },
     isRented: { type: Boolean, default: false },
     reviews: [reviewSchema],
     reviewSummary: { type: String, default: 'No reviews yet.' },
@@ -25,6 +30,7 @@ const rentalProductSchema = new Schema({
 
 // Schema for items that have been rented out (a historical record)
 const rentedProductSchema = new Schema({
+    originalRentalId: { type: Schema.Types.ObjectId, ref: 'RentalProduct' },
     name: { type: String, required: true },
     category: { type: String, required: true },
     description: String,
@@ -33,7 +39,8 @@ const rentedProductSchema = new Schema({
     rentalPricePerDay: { type: Number, required: true },
     renterId: { type: String, required: true },
     rentalDays: { type: Number, required: true, min: 1 },
-    contactDetails: String, // **FIX**: Added field for better historical data
+    contactDetails: String,
+    selectedZone: { type: String, required: true }, // The zone chosen by the renter
     rentedAt: { type: Date, default: Date.now }
 });
 
