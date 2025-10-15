@@ -25,6 +25,7 @@ const rentalProductSchema = new Schema({
     isRented: { type: Boolean, default: false },
     reviews: [reviewSchema],
     reviewSummary: { type: String, default: 'No reviews yet.' },
+    descriptionEmbedding: { type: [Number] }, // Field to store AI-generated vector embedding
     createdAt: { type: Date, default: Date.now }
 });
 
@@ -40,7 +41,7 @@ const rentedProductSchema = new Schema({
     renterId: { type: String, required: true },
     rentalDays: { type: Number, required: true, min: 1 },
     contactDetails: String,
-    selectedZone: { type: String, required: true }, // The zone chosen by the renter
+    selectedZone: { type: String, required: true },
     rentedAt: { type: Date, default: Date.now }
 });
 

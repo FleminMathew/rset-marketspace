@@ -16,6 +16,7 @@ const productSchema = new Schema({
         validate: [val => val.length >= 3, 'Please select at least 3 delivery zones.']
     },
     isSold: { type: Boolean, default: false, index: true },
+    descriptionEmbedding: { type: [Number] }, // Field to store AI-generated vector embedding
     createdAt: { type: Date, default: Date.now }
 });
 
@@ -30,7 +31,7 @@ const soldProductSchema = new Schema({
     sellerId: { type: String, required: true, index: true },
     buyerId: { type: String, required: true, index: true },
     contactDetails: String,
-    selectedZone: { type: String, required: true }, // The zone chosen by the buyer
+    selectedZone: { type: String, required: true },
     soldAt: { type: Date, default: Date.now }
 });
 
